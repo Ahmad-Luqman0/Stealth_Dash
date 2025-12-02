@@ -49,12 +49,8 @@ def init_connection():
     try:
         # Try to get connection string from Streamlit secrets first (for cloud deployment)
         # Fall back to hardcoded connection for local development
-        try:
-            connection_string = st.secrets["mongodb"]["connection_string"]
-        except:
-            connection_string = (
-                "mongodb+srv://admin:ahmad@cluster0.oyvzkiz.mongodb.net/"
-            )
+        connection_string = st.secrets["mongodb"]["connection_string"]
+
 
         client = MongoClient(
             connection_string,
