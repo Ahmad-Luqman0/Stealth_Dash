@@ -1218,7 +1218,6 @@ elif page == "Screenshots":
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; color: #7f8c8d; padding: 20px;'>"
-    "Stealth Monitor Analytics Dashboard v1.0 | "
     f"Data refreshes every 30 seconds | Last update: {datetime.now().strftime('%H:%M:%S')}"
     "</div>",
     unsafe_allow_html=True,
