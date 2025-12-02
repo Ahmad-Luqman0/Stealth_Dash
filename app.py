@@ -47,8 +47,17 @@ st_autorefresh(interval=30 * 1000, key="dashboard_refresh")
 def init_connection():
     """Initialize MongoDB connection"""
     try:
+        # Try to get connection string from Streamlit secrets first (for cloud deployment)
+        # Fall back to hardcoded connection for local development
+        try:
+            connection_string = st.secrets["mongodb"]["connection_string"]
+        except:
+            connection_string = (
+                "mongodb+srv://admin:ahmad@cluster0.oyvzkiz.mongodb.net/"
+            )
+
         client = MongoClient(
-            "mongodb+srv://admin:ahmad@cluster0.oyvzkiz.mongodb.net/",
+            connection_string,
             serverSelectionTimeoutMS=5000,
         )
         client.admin.command("ping")
