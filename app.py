@@ -10,7 +10,6 @@ FEATURES:
   - User Analysis: Individual user productivity tracking
   - Session Details: Detailed session breakdown
   - Trends: Time-series analysis and patterns
-  - Heatmaps: Activity distribution visualization
   - App/URL Analysis: Application and website usage breakdown
   - Interactive charts with Plotly
   - Real-time auto-refresh
@@ -27,7 +26,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import numpy as np
 from collections import defaultdict
 
 # ==================== PAGE CONFIGURATION ====================
@@ -47,10 +45,8 @@ st_autorefresh(interval=30 * 1000, key="dashboard_refresh")
 def init_connection():
     """Initialize MongoDB connection"""
     try:
-        # Try to get connection string from Streamlit secrets first (for cloud deployment)
-        # Fall back to hardcoded connection for local development
+        # Get connection string from Streamlit secrets (required for deployment)
         connection_string = st.secrets["mongodb"]["connection_string"]
-
 
         client = MongoClient(
             connection_string,
@@ -60,6 +56,7 @@ def init_connection():
         return client
     except Exception as e:
         st.error(f"MongoDB Connection Failed: {e}")
+        st.error("Please configure MongoDB connection in Streamlit secrets.")
         st.stop()
 
 
@@ -147,7 +144,6 @@ page = st.sidebar.radio(
         "User Analysis",
         "Session Details",
         "Trends & Patterns",
-        "Activity Heatmap",
         "App & URL Analysis",
         "Screenshots",
     ],
@@ -992,99 +988,6 @@ elif page == "Trends & Patterns":
     )
     st.plotly_chart(fig_timeline, use_container_width=True)
 
-# ==================== PAGE: ACTIVITY HEATMAP ====================
-elif page == "Activity Heatmap":
-    st.title("Activity Heatmap")
-    st.markdown("### Visualize activity intensity across time periods")
-
-    all_users = get_all_users()
-
-    if not all_users:
-        st.error("No users found")
-        st.stop()
-
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        selected_user = st.selectbox("Select User", all_users, key="heatmap_user")
-    with col2:
-        start_date = st.date_input(
-            "From", datetime.now().date() - timedelta(days=30), key="heatmap_start"
-        )
-    with col3:
-        end_date = st.date_input("To", datetime.now().date(), key="heatmap_end")
-
-    date_data = get_date_range_data(selected_user, start_date, end_date)
-
-    if not date_data:
-        st.stop()
-
-    # Build heatmap data: [date][hour] = productivity_score
-    heatmap_data = {}
-
-    for date_entry in date_data:
-        date_str = date_entry["date"]
-        hour_data = [0] * 24  # Initialize 24 hours
-
-        for session in date_entry.get("sessions", []):
-            try:
-                start_time = datetime.strptime(session["start_time"], "%H:%M:%S")
-                end_time = datetime.strptime(session["end_time"], "%H:%M:%S")
-
-                # Simple approach: distribute total times across hours
-                start_hour = start_time.hour
-                end_hour = end_time.hour
-
-                productive = session.get("productive_time", 0)
-                total = session.get("total_time", 1)
-
-                # Calculate productivity score
-                productivity_score = (productive / total * 100) if total > 0 else 0
-
-                # Apply to hour range
-                if start_hour == end_hour:
-                    hour_data[start_hour] = max(
-                        hour_data[start_hour], productivity_score
-                    )
-                else:
-                    for h in range(start_hour, min(end_hour + 1, 24)):
-                        hour_data[h] = max(hour_data[h], productivity_score)
-            except:
-                pass
-
-        heatmap_data[date_str] = hour_data
-
-    # Convert to DataFrame
-    dates = sorted(heatmap_data.keys())
-    hours = list(range(24))
-
-    matrix = []
-    for date_str in dates:
-        matrix.append(heatmap_data[date_str])
-
-    if matrix:
-        st.markdown("### Productivity Heatmap (by Hour)")
-        st.markdown("**Color intensity represents productivity percentage**")
-
-        fig_heatmap = go.Figure(
-            data=go.Heatmap(
-                z=matrix,
-                x=[f"{h:02d}:00" for h in hours],
-                y=dates,
-                colorscale="RdYlGn",
-                colorbar=dict(title="Productivity %"),
-                hoverongaps=False,
-            )
-        )
-
-        fig_heatmap.update_layout(
-            title="Productivity Heatmap: Date vs Hour",
-            xaxis_title="Hour of Day",
-            yaxis_title="Date",
-            height=max(400, len(dates) * 20),
-        )
-
-        st.plotly_chart(fig_heatmap, use_container_width=True)
 
 # ==================== PAGE: APP & URL ANALYSIS ====================
 elif page == "App & URL Analysis":
