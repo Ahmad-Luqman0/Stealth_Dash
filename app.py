@@ -33,7 +33,7 @@ st.set_page_config(
     page_title="Stealth Monitor Analytics",
     layout="wide",
     initial_sidebar_state="expanded",
-    menu_items={"About": "Stealth Monitor Analytics Dashboard v1.0"},
+    menu_items={"About": "Stealth Monitor Analytics Dashboard"},
 )
 
 # Auto-refresh every 30 seconds
@@ -45,8 +45,18 @@ st_autorefresh(interval=30 * 1000, key="dashboard_refresh")
 def init_connection():
     """Initialize MongoDB connection"""
     try:
-        # Get connection string from Streamlit secrets (required for deployment)
-        connection_string = st.secrets["mongodb"]["connection_string"]
+        # Try to get connection string from Streamlit secrets
+        try:
+            connection_string = st.secrets["mongodb"]["connection_string"]
+        except (KeyError, FileNotFoundError):
+            st.error("MongoDB connection string not configured!")
+            st.info(
+                "Please add your MongoDB connection string to Streamlit Cloud:\n\n"
+                "1. Go to your app settings\n"
+                "2. Click on 'Secrets'\n"
+                '3. Add:\n```\n[mongodb]\nconnection_string = "your_connection_string_here"\n```'
+            )
+            st.stop()
 
         client = MongoClient(
             connection_string,
@@ -56,7 +66,6 @@ def init_connection():
         return client
     except Exception as e:
         st.error(f"MongoDB Connection Failed: {e}")
-        st.error("Please configure MongoDB connection in Streamlit secrets.")
         st.stop()
 
 
