@@ -142,6 +142,23 @@ def extract_usage_data(usage_breakdown):
     return usage_data
 
 
+# ==================== HELPER FUNCTIONS ====================
+@st.cache_data
+def convert_df(df):
+    """Convert DataFrame to CSV"""
+    # check if 'total_time' column exists and if so, convert it to HMS string representation for the CSV report to be more readable
+    # Create a copy to avoid modifying the original dataframe which might be used elsewhere
+    export_df = df.copy()
+    
+    # Optional: Enhance readability of time columns if they strictly exist as seconds
+    # This is a generic helper, so we should be careful not to break things if columns don't exist
+    # But for this specific dashboard, we know 'total_time' etc are usually in seconds.
+    # However, keeping it raw (seconds) is often better for data analysis in Excel.
+    # Let's keep it raw for now as per standard data export practices, or maybe add both?
+    # For now, standard functionality: just export what is in the DF.
+    return export_df.to_csv(index=False).encode('utf-8')
+
+
 # ==================== SIDEBAR NAVIGATION ====================
 st.sidebar.title("Navigation")
 st.sidebar.markdown("---")
@@ -379,6 +396,13 @@ if page == "Overview":
             use_container_width=True,
         )
 
+        st.download_button(
+            label="Download Report",
+            data=convert_df(df_users),
+            file_name="overview_user_stats.csv",
+            mime="text/csv",
+        )
+
 # ==================== PAGE: USER ANALYSIS ====================
 elif page == "User Analysis":
     st.title("User Analysis")
@@ -573,6 +597,13 @@ elif page == "User Analysis":
         ),
         hide_index=True,
         use_container_width=True,
+    )
+
+    st.download_button(
+        label="Download Report",
+        data=convert_df(df_daily),
+        file_name=f"user_analysis_{selected_user}_{start_date}_{end_date}.csv",
+        mime="text/csv",
     )
 
 # ==================== PAGE: SESSION DETAILS ====================
@@ -1151,6 +1182,13 @@ elif page == "App & URL Analysis":
     )
 
     st.dataframe(df_display, hide_index=True, use_container_width=True, height=600)
+
+    st.download_button(
+        label="Download Report",
+        data=convert_df(df_usage),
+        file_name=f"app_usage_{selected_user}_{start_date}_{end_date}.csv",
+        mime="text/csv",
+    )
 
 # ==================== PAGE: SCREENSHOTS ====================
 elif page == "Screenshots":
