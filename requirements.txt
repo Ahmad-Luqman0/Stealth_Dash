@@ -3,5 +3,3 @@ pymongo==4.6.1
 pandas==2.1.4
 plotly==5.18.0
 streamlit-autorefresh==1.0.1
-reportlab==4.0.7
-kaleido==0.2.1
