@@ -585,10 +585,7 @@ if page == "Overview":
                     mime="application/pdf",
                     help="Download comprehensive report with graphs and data",
                 )
-            except Exception as e:
-                st.warning(
-                    f"PDF generation requires additional packages. Install with: pip install reportlab kaleido"
-                )
+            
 
 # ==================== PAGE: USER ANALYSIS ====================
 elif page == "User Analysis":
