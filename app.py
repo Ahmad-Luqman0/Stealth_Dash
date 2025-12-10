@@ -549,42 +549,40 @@ if page == "Overview":
             )
 
         with col2:
-            try:
-                # Prepare data for PDF
-                pdf_tables = {
-                    "User Statistics": df_display[
-                        [
-                            "username",
-                            "sessions",
-                            "total_time",
-                            "productive_time",
-                            "productivity_rate",
-                        ]
-                    ],
-                    "Activity Breakdown": activity_data[
-                        ["Activity", "Time", "Percentage"]
-                    ],
-                }
+            pdf_tables = {
+                "User Statistics": df_display[
+                    [
+                        "username",
+                        "sessions",
+                        "total_time",
+                        "productive_time",
+                        "productivity_rate",
+                    ]
+                ],
+                "Activity Breakdown": activity_data[
+                    ["Activity", "Time", "Percentage"]
+                ],
+            }
 
-                # Prepare figures for PDF
-                pdf_figures = {
-                    "Activity Distribution": fig_pie,
-                    "User Performance Comparison": fig_bar,
-                }
+            # Prepare figures for PDF
+            pdf_figures = {
+                "Activity Distribution": fig_pie,
+                "User Performance Comparison": fig_bar,
+            }
 
-                pdf_buffer = create_pdf_report(
-                    f"Overview Report ({start_date} to {end_date})",
-                    pdf_tables,
-                    pdf_figures,
-                )
+            pdf_buffer = create_pdf_report(
+                f"Overview Report ({start_date} to {end_date})",
+                pdf_tables,
+                pdf_figures,
+            )
 
-                st.download_button(
-                    label="Download Full Report (PDF)",
-                    data=pdf_buffer,
-                    file_name=f"overview_report_{start_date}_{end_date}.pdf",
-                    mime="application/pdf",
-                    help="Download comprehensive report with graphs and data",
-                )
+            st.download_button(
+                label="Download Full Report (PDF)",
+                data=pdf_buffer,
+                file_name=f"overview_report_{start_date}_{end_date}.pdf",
+                mime="application/pdf",
+                help="Download comprehensive report with graphs and data",
+            )
             
 
 # ==================== PAGE: USER ANALYSIS ====================
