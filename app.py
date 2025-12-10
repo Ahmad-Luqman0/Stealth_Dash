@@ -149,14 +149,14 @@ def convert_df(df):
     # check if 'total_time' column exists and if so, convert it to HMS string representation for the CSV report to be more readable
     # Create a copy to avoid modifying the original dataframe which might be used elsewhere
     export_df = df.copy()
-
+    
     # Optional: Enhance readability of time columns if they strictly exist as seconds
     # This is a generic helper, so we should be careful not to break things if columns don't exist
     # But for this specific dashboard, we know 'total_time' etc are usually in seconds.
     # However, keeping it raw (seconds) is often better for data analysis in Excel.
     # Let's keep it raw for now as per standard data export practices, or maybe add both?
     # For now, standard functionality: just export what is in the DF.
-    return export_df.to_csv(index=False).encode("utf-8")
+    return export_df.to_csv(index=False).encode('utf-8')
 
 
 # ==================== SIDEBAR NAVIGATION ====================
