@@ -2,7 +2,6 @@
 ╔════════════════════════════════════════════════════════════════════════╗
 ║        STEALTH MONITOR - COMPREHENSIVE ANALYTICS DASHBOARD            ║
 ║                    Multi-Page Visualization Dashboard                  ║
-║                    Enhanced with Download Features                     ║
 ╚════════════════════════════════════════════════════════════════════════╝
 
 FEATURES:
@@ -14,10 +13,10 @@ FEATURES:
   - App/URL Analysis: Application and website usage breakdown
   - Interactive charts with Plotly
   - Real-time auto-refresh
-  - Export capabilities (CSV and Full Report with Graphs)
+  - Export capabilities
 
 USAGE:
-  streamlit run app1.py
+  streamlit run dashboard_enhanced.py
 """
 
 import streamlit as st
@@ -28,22 +27,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from collections import defaultdict
-import io
-import base64
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.lib import colors
-from reportlab.lib.units import inch
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Table,
-    TableStyle,
-    Paragraph,
-    Spacer,
-    PageBreak,
-    Image,
-)
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 # ==================== PAGE CONFIGURATION ====================
 st.set_page_config(
@@ -159,142 +142,21 @@ def extract_usage_data(usage_breakdown):
     return usage_data
 
 
-# ==================== EXPORT FUNCTIONS ====================
+# ==================== HELPER FUNCTIONS ====================
 @st.cache_data
-def convert_df_to_csv(df):
+def convert_df(df):
     """Convert DataFrame to CSV"""
-    return df.to_csv(index=False).encode("utf-8")
+    # check if 'total_time' column exists and if so, convert it to HMS string representation for the CSV report to be more readable
+    # Create a copy to avoid modifying the original dataframe which might be used elsewhere
+    export_df = df.copy()
 
-
-def fig_to_base64(fig):
-    """Convert Plotly figure to base64 encoded image"""
-    img_bytes = fig.to_image(format="png", width=800, height=400)
-    return base64.b64encode(img_bytes).decode()
-
-
-def create_pdf_report(title, data_dict, figures_dict=None):
-    """
-    Create a PDF report with data tables and graphs
-
-    Args:
-        title: Report title
-        data_dict: Dictionary of {section_name: dataframe}
-        figures_dict: Dictionary of {figure_name: plotly_figure}
-    """
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        rightMargin=50,
-        leftMargin=50,
-        topMargin=50,
-        bottomMargin=50,
-    )
-
-    # Container for the 'Flowable' objects
-    elements = []
-
-    # Define styles
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        "CustomTitle",
-        parent=styles["Heading1"],
-        fontSize=24,
-        textColor=colors.HexColor("#2c3e50"),
-        spaceAfter=30,
-        alignment=TA_CENTER,
-    )
-
-    heading_style = ParagraphStyle(
-        "CustomHeading",
-        parent=styles["Heading2"],
-        fontSize=16,
-        textColor=colors.HexColor("#34495e"),
-        spaceAfter=12,
-        spaceBefore=12,
-    )
-
-    # Add title
-    elements.append(Paragraph(title, title_style))
-    elements.append(Spacer(1, 12))
-
-    # Add timestamp
-    timestamp = Paragraph(
-        f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        styles["Normal"],
-    )
-    elements.append(timestamp)
-    elements.append(Spacer(1, 20))
-
-    # Add data tables
-    for section_name, df in data_dict.items():
-        # Section heading
-        elements.append(Paragraph(section_name, heading_style))
-        elements.append(Spacer(1, 12))
-
-        # Prepare table data
-        if not df.empty:
-            # Limit to first 50 rows for PDF
-            display_df = df.head(50)
-            table_data = [display_df.columns.tolist()] + display_df.values.tolist()
-
-            # Create table
-            col_widths = [letter[0] / len(df.columns)] * len(df.columns)
-            table = Table(table_data, colWidths=col_widths)
-
-            # Style the table
-            table.setStyle(
-                TableStyle(
-                    [
-                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3498db")),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                        ("FONTSIZE", (0, 0), (-1, 0), 10),
-                        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-                        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-                        ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                        ("FONTSIZE", (0, 1), (-1, -1), 8),
-                    ]
-                )
-            )
-
-            elements.append(table)
-            elements.append(Spacer(1, 20))
-        else:
-            elements.append(Paragraph("No data available", styles["Normal"]))
-            elements.append(Spacer(1, 12))
-
-    # Add graphs
-    if figures_dict:
-        elements.append(PageBreak())
-        elements.append(Paragraph("Visual Analytics", title_style))
-        elements.append(Spacer(1, 20))
-
-        for fig_name, fig in figures_dict.items():
-            try:
-                # Section heading for graph
-                elements.append(Paragraph(fig_name, heading_style))
-                elements.append(Spacer(1, 12))
-
-                # Convert figure to image and add to PDF
-                img_buffer = io.BytesIO()
-                fig.write_image(img_buffer, format="png", width=700, height=400)
-                img_buffer.seek(0)
-
-                img = Image(img_buffer, width=6 * inch, height=3.5 * inch)
-                elements.append(img)
-                elements.append(Spacer(1, 20))
-            except Exception as e:
-                elements.append(
-                    Paragraph(f"Could not render graph: {str(e)}", styles["Normal"])
-                )
-                elements.append(Spacer(1, 12))
-
-    # Build PDF
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
+    # Optional: Enhance readability of time columns if they strictly exist as seconds
+    # This is a generic helper, so we should be careful not to break things if columns don't exist
+    # But for this specific dashboard, we know 'total_time' etc are usually in seconds.
+    # However, keeping it raw (seconds) is often better for data analysis in Excel.
+    # Let's keep it raw for now as per standard data export practices, or maybe add both?
+    # For now, standard functionality: just export what is in the DF.
+    return export_df.to_csv(index=False).encode("utf-8")
 
 
 # ==================== SIDEBAR NAVIGATION ====================
@@ -534,56 +396,12 @@ if page == "Overview":
             use_container_width=True,
         )
 
-        # Download buttons
-        st.markdown("### Download Options")
-        col1, col2 = st.columns(2)
-
-        with col1:
-            csv_data = convert_df_to_csv(df_users)
-            st.download_button(
-                label="Download CSV Report",
-                data=csv_data,
-                file_name=f"overview_user_stats_{start_date}_{end_date}.csv",
-                mime="text/csv",
-                help="Download raw data as CSV file",
-            )
-
-        with col2:
-            pdf_tables = {
-                "User Statistics": df_display[
-                    [
-                        "username",
-                        "sessions",
-                        "total_time",
-                        "productive_time",
-                        "productivity_rate",
-                    ]
-                ],
-                "Activity Breakdown": activity_data[
-                    ["Activity", "Time", "Percentage"]
-                ],
-            }
-
-            # Prepare figures for PDF
-            pdf_figures = {
-                "Activity Distribution": fig_pie,
-                "User Performance Comparison": fig_bar,
-            }
-
-            pdf_buffer = create_pdf_report(
-                f"Overview Report ({start_date} to {end_date})",
-                pdf_tables,
-                pdf_figures,
-            )
-
-            st.download_button(
-                label="Download Full Report (PDF)",
-                data=pdf_buffer,
-                file_name=f"overview_report_{start_date}_{end_date}.pdf",
-                mime="application/pdf",
-                help="Download comprehensive report with graphs and data",
-            )
-            
+        st.download_button(
+            label="Download Report",
+            data=convert_df(df_users),
+            file_name="overview_user_stats.csv",
+            mime="text/csv",
+        )
 
 # ==================== PAGE: USER ANALYSIS ====================
 elif page == "User Analysis":
@@ -617,7 +435,6 @@ elif page == "User Analysis":
     date_data = get_date_range_data(selected_user, start_date, end_date)
 
     if not date_data:
-        st.warning("No data available for selected date range")
         st.stop()
 
     # Aggregate user metrics
@@ -782,58 +599,12 @@ elif page == "User Analysis":
         use_container_width=True,
     )
 
-    # Download buttons
-    st.markdown("### Download Options")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        csv_data = convert_df_to_csv(df_daily)
-        st.download_button(
-            label="Download CSV Report",
-            data=csv_data,
-            file_name=f"user_analysis_{selected_user}_{start_date}_{end_date}.csv",
-            mime="text/csv",
-            help="Download raw data as CSV file",
-        )
-
-    with col2:
-        try:
-            # Prepare data for PDF
-            pdf_tables = {
-                "Daily Statistics": df_display[
-                    [
-                        "date",
-                        "sessions",
-                        "total_time",
-                        "productive_time",
-                        "productivity_%",
-                    ]
-                ]
-            }
-
-            # Prepare figures for PDF
-            pdf_figures = {
-                "Daily Productivity Trend": fig_trend,
-                "Productivity Rate Trend": fig_prod_rate,
-            }
-
-            pdf_buffer = create_pdf_report(
-                f"User Analysis Report - {selected_user} ({start_date} to {end_date})",
-                pdf_tables,
-                pdf_figures,
-            )
-
-            st.download_button(
-                label="Download Full Report (PDF)",
-                data=pdf_buffer,
-                file_name=f"user_analysis_{selected_user}_{start_date}_{end_date}.pdf",
-                mime="application/pdf",
-                help="Download comprehensive report with graphs and data",
-            )
-        except Exception as e:
-            st.warning(
-                f"PDF generation requires additional packages. Install with: pip install reportlab kaleido"
-            )
+    st.download_button(
+        label="Download Report",
+        data=convert_df(df_daily),
+        file_name=f"user_analysis_{selected_user}_{start_date}_{end_date}.csv",
+        mime="text/csv",
+    )
 
 # ==================== PAGE: SESSION DETAILS ====================
 elif page == "Session Details":
@@ -858,7 +629,6 @@ elif page == "Session Details":
                 "Select Date", sorted(dates_list, reverse=True)
             )
         else:
-            st.warning("No dates available for this user")
             st.stop()
 
     # Get sessions for selected date
@@ -869,7 +639,6 @@ elif page == "Session Details":
             break
 
     if not sessions:
-        st.warning("No sessions found for selected date")
         st.stop()
 
     # Sessions overview
@@ -889,8 +658,9 @@ elif page == "Session Details":
             }
         )
 
-    df_sessions = pd.DataFrame(session_summary)
-    st.dataframe(df_sessions, hide_index=True, use_container_width=True)
+    st.dataframe(
+        pd.DataFrame(session_summary), hide_index=True, use_container_width=True
+    )
 
     # Select session for detailed analysis
     st.markdown("---")
@@ -1014,67 +784,6 @@ elif page == "Session Details":
         st.markdown("#### Detailed Usage Table")
         st.dataframe(df_usage_display, hide_index=True, use_container_width=True)
 
-        # Download buttons
-        st.markdown("### Download Options")
-        col1, col2 = st.columns(2)
-
-        with col1:
-            csv_data = convert_df_to_csv(df_usage)
-            st.download_button(
-                label="Download Session CSV",
-                data=csv_data,
-                file_name=f"session_{selected_session_id}_{selected_date}.csv",
-                mime="text/csv",
-                help="Download session usage data as CSV",
-            )
-
-        with col2:
-            try:
-                # Prepare data for PDF
-                pdf_tables = {
-                    "Session Information": pd.DataFrame(
-                        [
-                            {
-                                "Session ID": selected_session_id,
-                                "Date": selected_date,
-                                "Start": selected_session["start_time"],
-                                "End": selected_session["end_time"],
-                                "Duration": seconds_to_hms(
-                                    selected_session.get("total_time", 0)
-                                ),
-                            }
-                        ]
-                    ),
-                    "Activity Breakdown": df_activity[
-                        ["Activity", "Time (HH:MM:SS)", "Percentage"]
-                    ],
-                    "Application Usage": df_usage_display.head(30),
-                }
-
-                # Prepare figures for PDF
-                pdf_figures = {
-                    "Activity Distribution": fig_pie,
-                    "Top Applications": fig_apps,
-                }
-
-                pdf_buffer = create_pdf_report(
-                    f"Session Details Report - {selected_session_id} ({selected_date})",
-                    pdf_tables,
-                    pdf_figures,
-                )
-
-                st.download_button(
-                    label="Download Full Report (PDF)",
-                    data=pdf_buffer,
-                    file_name=f"session_report_{selected_session_id}_{selected_date}.pdf",
-                    mime="application/pdf",
-                    help="Download comprehensive session report with graphs",
-                )
-            except Exception as e:
-                st.warning(
-                    f"PDF generation requires additional packages. Install with: pip install reportlab kaleido"
-                )
-
 # ==================== PAGE: TRENDS & PATTERNS ====================
 elif page == "Trends & Patterns":
     st.title("Trends & Patterns")
@@ -1101,7 +810,6 @@ elif page == "Trends & Patterns":
     date_data = get_date_range_data(selected_user, start_date, end_date)
 
     if not date_data:
-        st.warning("No data available for selected date range")
         st.stop()
 
     # Aggregate hourly data
@@ -1177,7 +885,6 @@ elif page == "Trends & Patterns":
         ]
     )
 
-    fig_hourly = None
     if not hourly_df.empty:
         fig_hourly = go.Figure()
         fig_hourly.add_trace(
@@ -1248,7 +955,6 @@ elif page == "Trends & Patterns":
         ]
     )
 
-    fig_weekly = None
     if not weekly_df.empty:
         fig_weekly = px.bar(
             weekly_df,
@@ -1322,62 +1028,6 @@ elif page == "Trends & Patterns":
     )
     st.plotly_chart(fig_timeline, use_container_width=True)
 
-    # Download buttons
-    st.markdown("### Download Options")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        # Prepare CSV data
-        df_daily_export = df_daily.copy()
-        df_daily_export["date"] = df_daily_export["date"].dt.strftime("%Y-%m-%d")
-        csv_data = convert_df_to_csv(df_daily_export)
-        st.download_button(
-            label="Download Trends CSV",
-            data=csv_data,
-            file_name=f"trends_{selected_user}_{start_date}_{end_date}.csv",
-            mime="text/csv",
-            help="Download trends data as CSV",
-        )
-
-    with col2:
-        try:
-            # Prepare data for PDF
-            df_display = df_daily.copy()
-            df_display["date"] = df_display["date"].dt.strftime("%Y-%m-%d")
-
-            pdf_tables = {
-                "Daily Trends": df_display[
-                    ["date", "weekday", "productive", "wasted", "idle", "neutral"]
-                ].head(30),
-                "Weekly Summary": weekly_df if not weekly_df.empty else pd.DataFrame(),
-            }
-
-            # Prepare figures for PDF
-            pdf_figures = {}
-            if fig_hourly:
-                pdf_figures["Hourly Pattern"] = fig_hourly
-            if fig_weekly:
-                pdf_figures["Weekly Pattern"] = fig_weekly
-            pdf_figures["Daily Timeline"] = fig_timeline
-
-            pdf_buffer = create_pdf_report(
-                f"Trends & Patterns Report - {selected_user} ({start_date} to {end_date})",
-                pdf_tables,
-                pdf_figures,
-            )
-
-            st.download_button(
-                label="Download Full Report (PDF)",
-                data=pdf_buffer,
-                file_name=f"trends_report_{selected_user}_{start_date}_{end_date}.pdf",
-                mime="application/pdf",
-                help="Download comprehensive trends report with graphs",
-            )
-        except Exception as e:
-            st.warning(
-                f"PDF generation requires additional packages. Install with: pip install reportlab kaleido"
-            )
-
 
 # ==================== PAGE: APP & URL ANALYSIS ====================
 elif page == "App & URL Analysis":
@@ -1404,7 +1054,6 @@ elif page == "App & URL Analysis":
     date_data = get_date_range_data(selected_user, start_date, end_date)
 
     if not date_data:
-        st.warning("No data available for selected date range")
         st.stop()
 
     # Aggregate usage data
@@ -1521,7 +1170,7 @@ elif page == "App & URL Analysis":
 
     df_display = df_usage.copy()
     df_display["time_formatted"] = df_display["total_time"].apply(seconds_to_hms)
-    df_display_table = df_display[
+    df_display = df_display[
         ["application", "category", "time_formatted", "visits"]
     ].rename(
         columns={
@@ -1532,56 +1181,14 @@ elif page == "App & URL Analysis":
         }
     )
 
-    st.dataframe(
-        df_display_table, hide_index=True, use_container_width=True, height=600
+    st.dataframe(df_display, hide_index=True, use_container_width=True, height=600)
+
+    st.download_button(
+        label="Download Report",
+        data=convert_df(df_usage),
+        file_name=f"app_usage_{selected_user}_{start_date}_{end_date}.csv",
+        mime="text/csv",
     )
-
-    # Download buttons
-    st.markdown("### Download Options")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        csv_data = convert_df_to_csv(df_usage)
-        st.download_button(
-            label="Download App Usage CSV",
-            data=csv_data,
-            file_name=f"app_usage_{selected_user}_{start_date}_{end_date}.csv",
-            mime="text/csv",
-            help="Download application usage data as CSV",
-        )
-
-    with col2:
-        try:
-            # Prepare data for PDF
-            pdf_tables = {
-                "Top Applications": df_display_table.head(30),
-                "Category Summary": category_totals,
-            }
-
-            # Prepare figures for PDF
-            pdf_figures = {
-                "Top Applications by Time": fig_top_time,
-                "Top Applications by Visits": fig_top_visits,
-                "Category Distribution": fig_category,
-            }
-
-            pdf_buffer = create_pdf_report(
-                f"Application Usage Report - {selected_user} ({start_date} to {end_date})",
-                pdf_tables,
-                pdf_figures,
-            )
-
-            st.download_button(
-                label="Download Full Report (PDF)",
-                data=pdf_buffer,
-                file_name=f"app_usage_report_{selected_user}_{start_date}_{end_date}.pdf",
-                mime="application/pdf",
-                help="Download comprehensive app usage report with graphs",
-            )
-        except Exception as e:
-            st.warning(
-                f"PDF generation requires additional packages. Install with: pip install reportlab kaleido"
-            )
 
 # ==================== PAGE: SCREENSHOTS ====================
 elif page == "Screenshots":
@@ -1622,7 +1229,7 @@ elif page == "Screenshots":
         )
 
         if not screenshots:
-            st.info("No screenshots found for the selected criteria")
+            pass
         else:
             st.success(f"Found {len(screenshots)} screenshots")
 
@@ -1641,16 +1248,6 @@ elif page == "Screenshots":
 
             df_screenshots = pd.DataFrame(screenshot_data)
             st.dataframe(df_screenshots, hide_index=True, use_container_width=True)
-
-            # Download button for screenshots metadata
-            csv_data = convert_df_to_csv(df_screenshots)
-            st.download_button(
-                label="Download Screenshots Metadata CSV",
-                data=csv_data,
-                file_name=f"screenshots_{selected_user}_{start_date}_{end_date}.csv",
-                mime="text/csv",
-                help="Download screenshots metadata as CSV",
-            )
 
     except Exception as e:
         st.error(f"Error fetching screenshots: {e}")
